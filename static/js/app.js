@@ -69,8 +69,19 @@ const views = {
         elements.viewTitle.innerText = 'Dashboard';
         elements.viewContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
         
-        const summary = await fetchAPI('/api/summary');
-        const latest = await fetchAPI('/api/transactions?limit=5');
+        let summary = await fetchAPI('/api/summary');
+        let latest = await fetchAPI('/api/transactions?limit=5');
+
+        // ESCUDO PARA BASE DE DATOS VACÍA EN VERCEL
+        if (!summary || !summary.history) {
+            summary = { 
+                total_income: 0, total_expense: 0, balance: 0, total_saving: 0, 
+                history: [], category_breakdown: [] 
+            };
+        }
+        if (!latest) {
+            latest = [];
+        }
         
         elements.viewContainer.innerHTML = `
             <div class="kpi-grid">
