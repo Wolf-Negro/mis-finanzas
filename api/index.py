@@ -4,10 +4,23 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from database import init_db
+
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)
 
-DATABASE = os.path.join(os.path.dirname(__file__), '..', 'finance.db')
+# CONFIGURACIÓN DINÁMICA DE BASE DE DATOS PARA VERCEL
+IS_VERCEL = 'VERCEL' in os.environ
+if IS_VERCEL:
+    DATABASE = '/tmp/finance.db'
+else:
+    DATABASE = os.path.join(os.path.dirname(__file__), '..', 'finance.db')
+
+# Asegurar que la base de datos esté inicializada en cada ejecución si no existe
+if not os.path.exists(DATABASE):
+    init_db(DATABASE)
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)

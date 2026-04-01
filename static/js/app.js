@@ -57,7 +57,7 @@ const loadInitialData = async () => {
     elements.currencyBadge.innerText = state.currency;
 
     state.categories = await fetchAPI('/api/categories');
-    
+
     // Set date
     const now = new Date();
     elements.dateDisplay.innerText = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -68,21 +68,21 @@ const views = {
     dashboard: async () => {
         elements.viewTitle.innerText = 'Dashboard';
         elements.viewContainer.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
-        
+
         let summary = await fetchAPI('/api/summary');
         let latest = await fetchAPI('/api/transactions?limit=5');
 
         // ESCUDO PARA BASE DE DATOS VACÍA EN VERCEL
         if (!summary || !summary.history) {
-            summary = { 
-                total_income: 0, total_expense: 0, balance: 0, total_saving: 0, 
-                history: [], category_breakdown: [] 
+            summary = {
+                total_income: 0, total_expense: 0, balance: 0, total_saving: 0,
+                history: [], category_breakdown: []
             };
         }
         if (!latest) {
             latest = [];
         }
-        
+
         elements.viewContainer.innerHTML = `
             <div class="kpi-grid">
                 <div class="card kpi-card income">
@@ -181,7 +181,7 @@ const views = {
         // Render Category Chart
         const ctxCat = document.getElementById('categoryChart').getContext('2d');
         const hasData = summary.category_breakdown.length > 0;
-        
+
         new Chart(ctxCat, {
             type: 'doughnut',
             data: {
@@ -204,7 +204,7 @@ const views = {
                     tooltip: {
                         enabled: hasData,
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 let label = context.label || '';
                                 if (label) label += ': ';
                                 if (context.parsed !== null) {
@@ -223,7 +223,7 @@ const views = {
     transactions: async () => {
         elements.viewTitle.innerText = 'Registros de Movimientos';
         const transactions = await fetchAPI('/api/transactions?limit=50');
-        
+
         elements.viewContainer.innerHTML = `
             <div class="card" style="margin-bottom: 32px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -300,7 +300,7 @@ const views = {
         // Filter categories by type
         const typeSelect = document.getElementById('trans-type');
         const catSelect = document.getElementById('trans-category');
-        
+
         const filterCats = () => {
             const selectedType = typeSelect.value;
             Array.from(catSelect.options).forEach(opt => {
@@ -358,18 +358,18 @@ const views = {
             const amount = parseFloat(data.amount);
             const type = data.type;
             const concept = data.concept.toLowerCase();
-            
+
             // Get category name for validation
             const catSelect = document.getElementById('trans-category');
             const categoryName = catSelect.options[catSelect.selectedIndex].text.toLowerCase();
-            
+
             // Dictionary of Impulses
             const impulseKeywords = [
                 'snack', 'dulce', 'gaseosa', 'chocolate', 'delivery', 'rappi', 'pedidosya', 'galleta', 'café', 'starbucks', 'chatarra', 'piqueo', 'helado',
                 'cigarro', 'alcohol', 'cerveza', 'bar', 'cine', 'juego', 'skin', 'casino', 'lotería',
                 'capricho', 'innecesario', 'lujo', 'antojo'
             ];
-            
+
             const isImpulseCategory = ['gasto hormiga', 'antojos'].includes(categoryName);
             const isImpulseKeyword = impulseKeywords.some(kw => concept.includes(kw));
             const isSmallAmount = amount < 15;
@@ -387,7 +387,7 @@ const views = {
 
             if (type === 'expense' && (isSmallAmount || isImpulseCategory || isImpulseKeyword)) {
                 showFrictionModal(
-                    submitData, 
+                    submitData,
                     () => showToast('¡Bien hecho, Inge! Ese dinero se queda en tu cuenta para tus metas reales.', 'success')
                 );
             } else {
@@ -399,7 +399,7 @@ const views = {
     categories: async () => {
         elements.viewTitle.innerText = 'Gestión de Categorías';
         state.editingCategoryId = null; // Reset edit mode
-        
+
         elements.viewContainer.innerHTML = `
             <div class="card" style="margin-bottom: 32px;">
                 <h3 id="category-form-title" style="margin-bottom: 20px;">Nueva Categoría</h3>
@@ -459,12 +459,12 @@ const views = {
         window.editCategory = (id) => {
             const cat = state.categories.find(c => c.id === id);
             if (!cat) return;
-            
+
             state.editingCategoryId = id;
             document.getElementById('cat-name').value = cat.name;
             document.getElementById('cat-type').value = cat.type;
             document.getElementById('cat-color').value = cat.color;
-            
+
             formTitle.innerText = 'Editar Categoría';
             submitBtn.innerText = 'Actualizar';
             cancelBtn.style.display = 'block';
@@ -473,7 +473,7 @@ const views = {
 
         window.deleteCategory = async (id) => {
             if (!confirm('¿Estás seguro de eliminar esta categoría?')) return;
-            
+
             const res = await fetchAPI(`/api/categories/${id}`, { method: 'DELETE' });
             if (res.status === 'success') {
                 showToast('Categoría eliminada');
@@ -496,7 +496,7 @@ const views = {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
+
             const url = state.editingCategoryId ? `/api/categories/${state.editingCategoryId}` : '/api/categories';
             const method = state.editingCategoryId ? 'PUT' : 'POST';
 
@@ -515,7 +515,7 @@ const views = {
 
     settings: async () => {
         elements.viewTitle.innerText = 'Configuración General';
-        
+
         elements.viewContainer.innerHTML = `
             <div class="card form-card">
                 <h3 style="margin-bottom: 24px;">Preferencias del Sistema</h3>
@@ -544,7 +544,7 @@ const views = {
 // Global Helpers
 window.deleteTransaction = async (id) => {
     if (!confirm('¿Estás seguro de eliminar este registro?')) return;
-    
+
     const res = await fetchAPI(`/api/transactions/${id}`, { method: 'DELETE' });
     if (res.status === 'success') {
         showToast('Registro eliminado');
@@ -566,7 +566,7 @@ const navigate = (view) => {
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
     await loadInitialData();
-    
+
     // Nav Click
     elements.navItems.forEach(item => {
         item.addEventListener('click', (e) => {

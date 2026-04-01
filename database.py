@@ -2,6 +2,7 @@ import sqlite3
 import os
 from datetime import datetime
 
+# Usamos una variable global que puede ser modificada por api/index.py en Vercel
 DATABASE = 'finance.db'
 
 def get_db_connection():
@@ -9,7 +10,11 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
+def init_db(db_path=None):
+    global DATABASE
+    if db_path:
+        DATABASE = db_path
+    
     conn = get_db_connection()
     cursor = conn.cursor()
 
