@@ -1,46 +1,51 @@
-import sqlite3
+import psycopg2
 import os
+from psycopg2 import extras
 from datetime import datetime
 
-# Usamos una variable global que puede ser modificada por api/index.py en Vercel
-DATABASE = 'finance.db'
+# URL de la base de datos desde variables de entorno (Supabase/Neon)
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL no está configurada en las variables de entorno.")
+    
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
-def init_db(db_path=None):
-    global DATABASE
-    if db_path:
-        DATABASE = db_path
-    
+def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # Settings table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             key TEXT UNIQUE NOT NULL,
             value TEXT NOT NULL
         )
     ''')
 
     # Default currency setting
-    cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', ('currency', '$'))
+    cursor.execute('INSERT INTO settings (key, value) VALUES (%s, %s) ON CONFLICT (key) DO NOTHING', ('currency', '$'))
 
     # Categories table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             type TEXT CHECK(type IN ('income', 'expense', 'saving')) NOT NULL,
             color TEXT DEFAULT '#64748b'
         )
     ''')
-
-    # Initial categories
+    
+    # Asegurar que el nombre de la categoría sea único para evitar duplicados en reinicios
+    # Pero no queremos romper la estructura existente si ya hay datos.
+    # En un fresh start, podemos añadir UNIQUE a 'name' si queremos, 
+    # pero mantendré la compatibilidad con el esquema original lo más posible.
+    # Usaremos ON CONFLICT (id) o similar si fuera necesario.
+    # Para categorías iniciales, mejor insertar si no existen.
+    
     default_categories = [
         ('Sueldo', 'income', '#10b981'),
         ('Comida', 'expense', '#ef4444'),
@@ -49,24 +54,28 @@ def init_db(db_path=None):
         ('Ahorro Emergencia', 'saving', '#8b5cf6'),
         ('Transferencia Interna', 'saving', '#94a3b8')
     ]
-    cursor.executemany('INSERT OR IGNORE INTO categories (name, type, color) VALUES (?, ?, ?)', default_categories)
+    
+    for cat in default_categories:
+        cursor.execute(
+            'INSERT INTO categories (name, type, color) SELECT %s, %s, %s WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = %s)',
+            (cat[0], cat[1], cat[2], cat[0])
+        )
 
     # Transactions table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             category_id INTEGER,
             amount REAL NOT NULL,
             concept TEXT NOT NULL,
-            date TEXT NOT NULL,
+            date DATE NOT NULL,
             type TEXT CHECK(type IN ('income', 'expense', 'saving')) NOT NULL,
             FOREIGN KEY (category_id) REFERENCES categories (id)
         )
     ''')
 
-
-
     conn.commit()
+    cursor.close()
     conn.close()
 
 if __name__ == '__main__':
