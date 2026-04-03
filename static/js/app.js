@@ -129,7 +129,7 @@ const views = {
                         <tbody>
                             ${latest.map(t => `
                                 <tr>
-                                    <td>${t.date}</td>
+                                    <td>${new Date(t.date).toLocaleDateString('es-PE', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' })}</td>
                                     <td>${t.concept}</td>
                                     <td><span class="badge" style="background: ${t.category_color}20; color: ${t.category_color}">${t.category_name}</span></td>
                                     <td style="color: ${t.type === 'income' ? 'var(--income)' : (t.type === 'expense' ? 'var(--expense)' : 'var(--saving)')}; font-weight: bold;">
@@ -278,7 +278,7 @@ const views = {
                         <tbody id="transactions-table-body">
                             ${transactions.map(t => `
                                 <tr id="t-row-${t.id}">
-                                    <td>${t.date}</td>
+                                    <td>${new Date(t.date).toLocaleDateString('es-PE', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' })}</td>
                                     <td>${t.concept}</td>
                                     <td><span class="badge" style="background: ${t.category_color}20; color: ${t.category_color}">${t.category_name}</span></td>
                                     <td style="color: ${t.type === 'income' ? 'var(--income)' : (t.type === 'expense' ? 'var(--expense)' : 'var(--saving)')}; font-weight: bold;">
@@ -355,24 +355,13 @@ const views = {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            const amount = parseFloat(data.amount);
             const type = data.type;
-            const concept = data.concept.toLowerCase();
-
-            // Get category name for validation
             const catSelect = document.getElementById('trans-category');
             const categoryName = catSelect.options[catSelect.selectedIndex].text.toLowerCase();
 
-            // Dictionary of Impulses
-            const impulseKeywords = [
-                'snack', 'dulce', 'gaseosa', 'chocolate', 'delivery', 'rappi', 'pedidosya', 'galleta', 'café', 'starbucks', 'chatarra', 'piqueo', 'helado',
-                'cigarro', 'alcohol', 'cerveza', 'bar', 'cine', 'juego', 'skin', 'casino', 'lotería',
-                'capricho', 'innecesario', 'lujo', 'antojo'
-            ];
-
-            const isImpulseCategory = ['gasto hormiga', 'antojos'].includes(categoryName);
-            const isImpulseKeyword = impulseKeywords.some(kw => concept.includes(kw));
-            const isSmallAmount = amount < 15;
+            // Logic: Whitelist (Save Immediately)
+            const whitelist = ['pago de agua', 'pago de luz', 'pago de internet', 'pago de herramientas', 'medicamentos'];
+            const isWhitelisted = whitelist.includes(categoryName);
 
             const submitData = async () => {
                 const res = await fetchAPI('/api/transactions', {
@@ -385,7 +374,8 @@ const views = {
                 }
             };
 
-            if (type === 'expense' && (isSmallAmount || isImpulseCategory || isImpulseKeyword)) {
+            // Friction only for Expenses that are NOT whitelisted
+            if (type === 'expense' && !isWhitelisted) {
                 showFrictionModal(
                     submitData,
                     () => showToast('¡Bien hecho, Inge! Ese dinero se queda en tu cuenta para tus metas reales.', 'success')
