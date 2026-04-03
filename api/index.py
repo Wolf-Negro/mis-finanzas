@@ -13,6 +13,7 @@ app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)
 
 # Inicializar base de datos en el arranque (especialmente útil en Vercel)
+# forzando reinicio
 try:
     init_db()
 except Exception as e:
